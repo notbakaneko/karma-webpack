@@ -355,11 +355,24 @@ Plugin.prototype.readFile = function(file, callback) {
       );
     } else {
       try {
-        const fileContents = middleware.fileSystem.readFileSync(
-          path.join(os.tmpdir(), '_karma_webpack_', this.outputs.get(file))
-        );
+        if (this.outputs.has(file)) {
+          const fileContents = middleware.fileSystem.readFileSync(
+            path.join(os.tmpdir(), '_karma_webpack_', this.outputs.get(file))
+          );
 
-        callback(null, fileContents);
+          callback(null, fileContents);
+        } else {
+          if (this.waiting == null) {
+            this.waiting = [];
+          }
+
+          this.waiting.push(
+            process.nextTick.bind(
+              process,
+              this.readFile.bind(this, file, callback)
+            )
+          );
+        }
       } catch (e) {
         // If this is an error from `readFileSync` method, wait for the next tick.
         // Credit #69 @mewdriller
